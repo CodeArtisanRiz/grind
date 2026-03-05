@@ -1,65 +1,89 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+const T = {
+  bg: "#0C0C0D", card: "#131315", border: "#1C1C20", borderHi: "#2A2A30",
+  accent: "#D4FF00", text: "#EFEFEF", sub: "#666672", faint: "#1A1A1E",
+};
+
+export default function AuthPage() {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "14px 16px", borderRadius: 12,
+    background: T.faint, border: `1px solid ${T.borderHi}`,
+    color: T.text, fontSize: 15, fontFamily: "'Syne'", outline: "none",
+    marginBottom: 10,
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+
+    if (mode === "signup") {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); setLoading(false); return; }
+    }
+
+    const result = await signIn("credentials", { email, password, redirect: false });
+
+    if (result?.error) {
+      setError("Invalid email or password");
+      setLoading(false);
+    } else {
+      router.push("/workout");
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{ fontFamily: "'Syne', sans-serif", background: T.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: 8, color: T.accent }}>GRIND</div>
+          <div style={{ fontSize: 12, color: T.sub, letterSpacing: 3, marginTop: 4, fontFamily: "'JetBrains Mono'" }}>WORKOUT TRACKER</div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div style={{ background: T.card, borderRadius: 20, padding: 28, border: `1px solid ${T.border}` }}>
+          <div style={{ display: "flex", background: T.faint, borderRadius: 10, padding: 4, marginBottom: 24 }}>
+            {(["login", "signup"] as const).map(m => (
+              <button key={m} onClick={() => { setMode(m); setError(""); }}
+                style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "'Syne'", fontWeight: 700, fontSize: 13, letterSpacing: 1.5, transition: "all 0.15s", background: mode === m ? T.accent : "none", color: mode === m ? "#0C0C0D" : T.sub }}>
+                {m.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {mode === "signup" && (
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" style={inputStyle} />
+            )}
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required style={inputStyle} />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required minLength={6} style={{ ...inputStyle, marginBottom: 0 }} />
+
+            {error && (
+              <div style={{ color: "#FF6B6B", fontSize: 12, fontFamily: "'JetBrains Mono'", marginTop: 10, textAlign: "center" }}>{error}</div>
+            )}
+
+            <button type="submit" disabled={loading}
+              style={{ width: "100%", marginTop: 16, padding: "15px 0", borderRadius: 12, border: "none", cursor: "pointer", fontFamily: "'Syne'", fontWeight: 800, fontSize: 15, letterSpacing: 2, background: T.accent, color: "#0C0C0D", opacity: loading ? 0.6 : 1 }}>
+              {loading ? "..." : mode === "login" ? "SIGN IN" : "CREATE ACCOUNT"}
+            </button>
+          </form>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
